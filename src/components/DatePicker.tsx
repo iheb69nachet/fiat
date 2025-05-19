@@ -2,19 +2,24 @@ import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DatePickerProps {
-  selectedDate: Date | null;
-  onDateSelect: (date: Date) => void;
+  selected: Date | null;
+  onChange: (date: Date) => void;
   minDate?: Date;
   maxDate?: Date;
+  placeholderText?: string;
+  className?: string;
 }
 
 const DatePicker: React.FC<DatePickerProps> = ({
-  selectedDate,
-  onDateSelect,
+  selected,
+  onChange,
   minDate = new Date(),
   maxDate = new Date(new Date().setMonth(new Date().getMonth() + 3)),
+  placeholderText = "Select a date",
+  className = ""
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isOpen, setIsOpen] = useState(false);
   
   // Get days in month
   const getDaysInMonth = (year: number, month: number) => {
@@ -27,30 +32,26 @@ const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const isDateDisabled = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     return date < minDate || date > maxDate;
   };
 
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.getDate() === today.getDate() && 
-           date.getMonth() === today.getMonth() && 
-           date.getFullYear() === today.getFullYear();
+  const handleDateSelect = (date: Date) => {
+    onChange(date);
+    setIsOpen(false);
   };
 
-  const isSelected = (date: Date) => {
-    if (!selectedDate) return false;
-    
-    return date.getDate() === selectedDate.getDate() && 
-           date.getMonth() === selectedDate.getMonth() && 
-           date.getFullYear() === selectedDate.getFullYear();
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)));
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)));
   };
 
-  const goToNextMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const renderCalendar = () => {
@@ -58,79 +59,78 @@ const DatePicker: React.FC<DatePickerProps> = ({
     const month = currentMonth.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
     const firstDayOfMonth = getFirstDayOfMonth(year, month);
-    
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="h-10 w-10"></div>);
+      days.push(<div key={`empty-${i}`} className="h-8" />);
     }
-    
-    // Add days of the month
+
+    // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      const disabled = isDateDisabled(date);
-      
+      const isDisabled = isDateDisabled(date);
+      const isSelected = selected && date.toDateString() === selected.toDateString();
+
       days.push(
         <button
-          key={`day-${day}`}
-          onClick={() => !disabled && onDateSelect(date)}
-          disabled={disabled}
-          className={`
-            h-10 w-10 rounded-full flex items-center justify-center text-sm
-            ${isSelected(date) ? 'bg-[#DD1D21] text-white' : ''}
-            ${isToday(date) && !isSelected(date) ? 'border border-[#DD1D21] text-[#DD1D21]' : ''}
-            ${disabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'}
-          `}
+          key={day}
+          onClick={() => !isDisabled && handleDateSelect(date)}
+          disabled={isDisabled}
+          className={`h-8 w-8 rounded-full flex items-center justify-center text-sm
+            ${isDisabled ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
+            ${isSelected ? 'bg-[#DD1D21] text-white hover:bg-[#B51419]' : ''}`}
         >
           {day}
         </button>
       );
     }
-    
+
     return days;
   };
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <div className="flex justify-between items-center mb-4">
-        <button 
-          onClick={goToPreviousMonth}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <h3 className="font-medium">
-          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-        </h3>
-        <button 
-          onClick={goToNextMonth}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-      
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-          <div key={index} className="h-8 flex items-center justify-center text-sm font-medium text-gray-500">
-            {day}
+    <div className="relative">
+      <input
+        type="text"
+        readOnly
+        placeholder={placeholderText}
+        value={selected ? formatDate(selected) : ''}
+        onClick={() => setIsOpen(!isOpen)}
+        className={className}
+      />
+
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-64 bg-white rounded-lg shadow-lg border p-4">
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-gray-100 rounded-full"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div className="font-semibold">
+              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </div>
+            <button
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-gray-100 rounded-full"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
-        ))}
-      </div>
-      
-      <div className="grid grid-cols-7 gap-1">
-        {renderCalendar()}
-      </div>
-      
-      {selectedDate && (
-        <div className="mt-4 text-sm text-gray-700">
-          Selected date: <span className="font-medium">{selectedDate.toLocaleDateString()}</span>
+
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+              <div key={day} className="h-8 flex items-center justify-center text-sm font-medium text-gray-500">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {renderCalendar()}
+          </div>
         </div>
       )}
     </div>

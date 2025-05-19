@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { getCars } from '../data/cars';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Car } from '../types/Car';
+import { TestDriveBooking } from '../types/Booking';
 import DatePicker from '../components/DatePicker';
+import { supabase } from '../lib/supabase';
 import { Calendar, Clock, User, Mail, Phone, MapPin, Car as CarIcon, CheckCircle2 } from 'lucide-react';
 
 const TestDrivePage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const carIdFromUrl = searchParams.get('carId');
   
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [carOptions, setCarOptions] = useState<Car[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,18 +28,27 @@ const TestDrivePage: React.FC = () => {
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
-    // Get all cars
-    const allCars = getCars();
-    setCarOptions(allCars);
-    
-    // If carId is provided in URL, select that car
-    if (carIdFromUrl) {
-      const car = allCars.find(c => c.id === carIdFromUrl);
-      if (car) {
-        setSelectedCar(car);
+    fetchCars();
+  }, []);
+
+  const fetchCars = async () => {
+    try {
+      const { data: cars, error } = await supabase
+        .from('cars')
+        .select('*');
+
+      if (error) throw error;
+
+      setCarOptions(cars || []);
+      
+      if (carIdFromUrl && cars) {
+        const car = cars.find(c => c.id === carIdFromUrl);
+        if (car) setSelectedCar(car);
       }
+    } catch (err: any) {
+      setFormError('Error loading cars. Please try again.');
     }
-  }, [carIdFromUrl]);
+  };
 
   const timeOptions = [
     '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', 
@@ -51,50 +63,54 @@ const TestDrivePage: React.FC = () => {
     });
   };
 
-  const handleCarSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const carId = e.target.value;
-    if (carId === '') {
-      setSelectedCar(null);
-      return;
-    }
-    
-    const car = carOptions.find(c => c.id === carId);
-    if (car) {
-      setSelectedCar(car);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!selectedCar) {
-      setFormError('Please select a car for your test drive.');
-      return;
-    }
-    
-    if (!selectedDate) {
-      setFormError('Please select a date for your test drive.');
-      return;
-    }
-    
-    if (!selectedTime) {
-      setFormError('Please select a time for your test drive.');
-      return;
-    }
-    
-    // Basic form validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
-      setFormError('Please fill out all required fields.');
-      return;
-    }
-    
-    // Clear any errors
     setFormError('');
-    
-    // Form submission would go here
-    // For demo, just show success state
-    setFormSubmitted(true);
+    setLoading(true);
+
+    if (!selectedCar || !selectedDate || !selectedTime) {
+      setFormError('Please select a car, date, and time.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const booking = {
+        car_id: selectedCar.id, // Changed from carId to car_id to match the schema
+        first_name: formData.firstName, // Changed from firstName to first_name
+        last_name: formData.lastName, // Changed from lastName to last_name
+        email: formData.email,
+        phone: formData.phone,
+        date: selectedDate.toISOString().split('T')[0],
+        time: selectedTime,
+        location: formData.location,
+        comments: formData.comments,
+        status: 'pending'
+      };
+
+      const { error } = await supabase
+        .from('test_drive_bookings')
+        .insert([booking]);
+
+      if (error) throw error;
+
+      setFormSubmitted(true);
+      // Clear form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        location: 'downtown',
+        comments: ''
+      });
+      setSelectedDate(null);
+      setSelectedTime('');
+    } catch (err: any) {
+      setFormError(err.message || 'Error submitting booking. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const locations = [
@@ -183,297 +199,156 @@ const TestDrivePage: React.FC = () => {
   }
 
   return (
-    <div className="page-transition pt-24 pb-16 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-2">Schedule a Test Drive</h1>
-        <p className="text-gray-600 mb-8">Experience the joy of driving a FIAT</p>
+    <div className="pt-24 container mx-auto px-4 pb-16">
+      <h1 className="text-3xl font-bold mb-8">Schedule a Test Drive</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <h2 className="text-xl font-bold mb-6">Select a Car</h2>
-              
-              <select
-                value={selectedCar?.id || ''}
-                onChange={handleCarSelect}
-                className="w-full rounded-md border border-gray-300 py-3 px-4 mb-6"
-              >
-                <option value="">Select a car for test drive</option>
-                {carOptions.map(car => (
-                  <option key={car.id} value={car.id}>
-                    {car.year} {car.make} {car.model} - {car.trim}
-                  </option>
-                ))}
-              </select>
-              
-              {selectedCar && (
-                <div className="flex flex-col sm:flex-row bg-gray-50 rounded-lg overflow-hidden">
-                  <div className="sm:w-1/3">
-                    <img 
-                      src={selectedCar.image} 
-                      alt={`${selectedCar.make} ${selectedCar.model}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4 sm:w-2/3">
-                    <h3 className="font-semibold text-lg mb-2">
-                      {selectedCar.year} {selectedCar.make} {selectedCar.model}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3">
-                      {selectedCar.trim}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-gray-500">Engine:</span> {selectedCar.engine}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Transmission:</span> {selectedCar.transmission}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">MPG:</span> {selectedCar.mpg}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Price:</span> ${selectedCar.price.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <h2 className="text-xl font-bold mb-6">Select Date & Time</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium mb-4">Date</h3>
-                  <DatePicker 
-                    selectedDate={selectedDate}
-                    onDateSelect={setSelectedDate}
-                    minDate={new Date()}
-                  />
-                </div>
-                
-                <div>
-                  <h3 className="font-medium mb-4">Time</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {timeOptions.map(time => (
-                      <button
-                        key={time}
-                        type="button"
-                        onClick={() => setSelectedTime(time)}
-                        className={`
-                          py-3 px-4 rounded-md border text-center
-                          ${selectedTime === time 
-                            ? 'bg-[#DD1D21] text-white border-[#DD1D21]' 
-                            : 'border-gray-300 hover:border-gray-400'}
-                        `}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-6">Your Information</h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="firstName">
-                      First Name*
-                    </label>
-                    <input
-                      type="text"
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 py-2 px-3"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="lastName">
-                      Last Name*
-                    </label>
-                    <input
-                      type="text"
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 py-2 px-3"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                      Email*
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 py-2 px-3"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="phone">
-                      Phone*
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full rounded-md border border-gray-300 py-2 px-3"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="location">
-                    Preferred Dealership Location
-                  </label>
-                  <select
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="w-full rounded-md border border-gray-300 py-2 px-3"
-                  >
-                    {locations.map(location => (
-                      <option key={location.id} value={location.id}>
-                        {location.name} - {location.address}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="comments">
-                    Comments or Special Requests
-                  </label>
-                  <textarea
-                    id="comments"
-                    name="comments"
-                    value={formData.comments}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="w-full rounded-md border border-gray-300 py-2 px-3"
-                  ></textarea>
-                </div>
-                
-                {formError && (
-                  <div className="bg-red-100 text-red-700 p-3 rounded-md mb-6">
-                    {formError}
-                  </div>
-                )}
-                
-                <button
-                  type="submit"
-                  className="w-full bg-[#DD1D21] text-white py-3 px-4 rounded-md font-semibold hover:bg-[#B51419] transition-colors"
-                >
-                  Schedule Test Drive
-                </button>
-              </form>
-            </div>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold mb-4">What to Expect</h3>
-              <ul className="space-y-3">
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">1</div>
-                  <p className="text-gray-600">Schedule your test drive by selecting a car, date, and time.</p>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">2</div>
-                  <p className="text-gray-600">Receive confirmation via email with details of your appointment.</p>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">3</div>
-                  <p className="text-gray-600">Bring your driver's license to the dealership on the scheduled date.</p>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">4</div>
-                  <p className="text-gray-600">A FIAT specialist will introduce you to the vehicle and its features.</p>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">5</div>
-                  <p className="text-gray-600">Enjoy your test drive on a predetermined route or customize your experience.</p>
-                </li>
-              </ul>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold mb-4">Contact Information</h3>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <Phone size={20} className="text-[#DD1D21] mr-3 mt-1 flex-shrink-0" />
-                  <div>
-                    <span className="block font-medium">Phone</span>
-                    <span className="text-gray-600">(800) FIAT-USA</span>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <Mail size={20} className="text-[#DD1D21] mr-3 mt-1 flex-shrink-0" />
-                  <div>
-                    <span className="block font-medium">Email</span>
-                    <span className="text-gray-600">testdrive@fiat.com</span>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <MapPin size={20} className="text-[#DD1D21] mr-3 mt-1 flex-shrink-0" />
-                  <div>
-                    <span className="block font-medium">Locations</span>
-                    <div className="text-gray-600 space-y-2 mt-1">
-                      {locations.map(location => (
-                        <div key={location.id}>
-                          <p className="font-medium text-gray-700">{location.name}</p>
-                          <p className="text-sm">{location.address}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold mb-4">Test Drive FAQs</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-1">How long does a test drive last?</h4>
-                  <p className="text-sm text-gray-600">Most test drives last about 30 minutes, giving you ample time to experience the vehicle.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-1">What do I need to bring?</h4>
-                  <p className="text-sm text-gray-600">A valid driver's license is required. Insurance information may also be requested.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-1">Can I test drive more than one vehicle?</h4>
-                  <p className="text-sm text-gray-600">Yes, you can schedule multiple test drives on the same day if availability allows.</p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-1">Can I bring someone with me?</h4>
-                  <p className="text-sm text-gray-600">Absolutely! We encourage you to bring passengers to get their opinion.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      {formSubmitted ? (
+        <div className="bg-green-50 p-8 rounded-lg text-center">
+          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-4">Test Drive Scheduled!</h2>
+          <p className="text-gray-600 mb-6">We'll contact you shortly to confirm your appointment.</p>
+          <button
+            onClick={() => {
+              setFormSubmitted(false);
+              navigate('/cars');
+            }}
+            className="bg-[#DD1D21] text-white px-6 py-2 rounded-md hover:bg-[#B51419] transition-colors"
+          >
+            Browse More Cars
+          </button>
         </div>
-      </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          {formError && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
+              {formError}
+            </div>
+          )}
+
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Select a Car</h2>
+            <select
+              value={selectedCar?.id || ''}
+              onChange={(e) => {
+                const car = carOptions.find(c => c.id === e.target.value);
+                setSelectedCar(car || null);
+              }}
+              className="w-full border rounded-md p-2"
+              required
+            >
+              <option value="">Select a car</option>
+              {carOptions.map(car => (
+                <option key={car.id} value={car.id}>
+                  {car.year} {car.make} {car.model} {car.trim}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Select Date & Time</h2>
+              <div className="space-y-4">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={setSelectedDate}
+                  minDate={new Date()}
+                  placeholderText="Select a date"
+                  className="w-full border rounded-md p-2"
+                  required
+                />
+                <select
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="w-full border rounded-md p-2"
+                  required
+                >
+                  <option value="">Select a time</option>
+                  {timeOptions.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Location</h2>
+              <select
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                className="w-full border rounded-md p-2"
+                required
+              >
+                <option value="downtown">Downtown Dealership</option>
+                <option value="north">North Location</option>
+                <option value="south">South Location</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Your Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder="First Name"
+                className="border rounded-md p-2"
+                required
+              />
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="Last Name"
+                className="border rounded-md p-2"
+                required
+              />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Email"
+                className="border rounded-md p-2"
+                required
+              />
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="Phone"
+                className="border rounded-md p-2"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Additional Comments</h2>
+            <textarea
+              name="comments"
+              value={formData.comments}
+              onChange={handleInputChange}
+              placeholder="Any special requests or questions?"
+              className="w-full border rounded-md p-2 h-32"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#DD1D21] text-white py-3 rounded-md hover:bg-[#B51419] transition-colors disabled:bg-gray-400"
+          >
+            {loading ? 'Scheduling...' : 'Schedule Test Drive'}
+          </button>
+        </form>
+      )}
     </div>
   );
 };

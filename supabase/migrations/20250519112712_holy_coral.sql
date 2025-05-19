@@ -33,37 +33,4 @@ CREATE TABLE IF NOT EXISTS admin_profiles (
 
 ALTER TABLE admin_profiles ENABLE ROW LEVEL SECURITY;
 
--- Policy to allow admins to read all profiles
-CREATE POLICY "Admins can read all profiles"
-  ON admin_profiles
-  FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND auth.users.raw_user_meta_data->>'role' = 'admin'
-    )
-  );
 
--- Policy to allow admins to insert their own profile
-CREATE POLICY "Admins can insert own profile"
-  ON admin_profiles
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    auth.uid() = user_id
-    AND EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE auth.users.id = auth.uid()
-      AND auth.users.raw_user_meta_data->>'role' = 'admin'
-    )
-  );
-
--- Policy to allow admins to update their own profile
-CREATE POLICY "Admins can update own profile"
-  ON admin_profiles
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);

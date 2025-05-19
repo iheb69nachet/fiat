@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getCars } from '../data/cars';
+import { supabase } from '../lib/supabase';
 import { Car } from '../types/Car';
 import { 
   Clock, 
@@ -18,41 +18,35 @@ const CarDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<{title: string, description: string} | null>(null);
   
   useEffect(() => {
-    // Get car by id
-    if (id) {
-      const foundCar = getCars().find(c => c.id === id);
-      setCar(foundCar || null);
-      setLoading(false);
-    }
+    fetchCarDetails();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="pt-24 flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DD1D21]"></div>
-      </div>
-    );
-  }
+  const fetchCarDetails = async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('cars')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-  if (!car) {
-    return (
-      <div className="pt-24 container mx-auto px-4 py-16 text-center">
-        <h2 className="text-2xl font-bold mb-4">Car Not Found</h2>
-        <p className="text-gray-600 mb-6">The car you're looking for does not exist.</p>
-        <Link 
-          to="/cars"
-          className="inline-block bg-[#DD1D21] text-white py-2 px-6 rounded-md hover:bg-[#B51419] transition-colors"
-        >
-          View All Cars
-        </Link>
-      </div>
-    );
-  }
+      if (error) throw error;
+console.log(data);
+
+      setCar(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const nextImage = () => {
     setCurrentImageIndex((currentImageIndex + 1) % car.images.length);
@@ -66,8 +60,12 @@ const CarDetailsPage: React.FC = () => {
     setSelectedFeature({ title, description });
     setShowFeatureModal(true);
   };
+  if(!car){
 
+    return(<div></div>)
+  }
   return (
+    
     <div className="page-transition pt-24 pb-16">
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
@@ -178,51 +176,9 @@ const CarDetailsPage: React.FC = () => {
               <p className="text-gray-600 whitespace-pre-line">{car.description}</p>
             </div>
 
-            {/* Features */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold mb-6">Features</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {car.features.map((feature, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-start"
-                  >
-                    <CheckCircle2 size={20} className="text-[#DD1D21] mr-2 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-medium">{feature.title}</span>
-                      {feature.description && (
-                        <button 
-                          onClick={() => openFeatureModal(feature.title, feature.description)}
-                          className="ml-2 text-sm text-[#DD1D21] hover:underline"
-                        >
-                          Details
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+           
 
-            {/* Technical Specifications */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold mb-6">Technical Specifications</h2>
-              <div className="space-y-4">
-                {car.specifications.map((spec, index) => (
-                  <div key={index} className={index !== 0 ? "pt-4 border-t border-gray-200" : ""}>
-                    <h3 className="font-semibold mb-3">{spec.category}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2">
-                      {spec.items.map((item, idx) => (
-                        <div key={idx} className="flex">
-                          <span className="text-gray-600 w-1/2">{item.name}:</span>
-                          <span className="font-medium w-1/2">{item.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+           
           </div>
 
           {/* Sidebar */}
@@ -248,7 +204,7 @@ const CarDetailsPage: React.FC = () => {
             </div>
 
             {/* Financing Calculator Teaser */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-6 hidden">
               <h3 className="text-xl font-bold mb-4">Estimate Monthly Payment</h3>
               <div className="space-y-4">
                 <div>

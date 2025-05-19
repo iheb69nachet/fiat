@@ -238,15 +238,7 @@ const CarsManagementPage: React.FC = () => {
               </label>
             </div>
             <div>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={editingCar?.isNew || false}
-                  onChange={e => setEditingCar({ ...editingCar, isNew: e.target.checked })}
-                  className="rounded border-gray-300 text-[#DD1D21] focus:ring-[#DD1D21]"
-                />
-                <span className="text-sm font-medium text-gray-700">New Car</span>
-              </label>
+              
             </div>
           </div>
           <div className="mt-4 flex space-x-3">
@@ -316,15 +308,7 @@ const CarsManagementPage: React.FC = () => {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      car.isNew
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {car.isNew ? 'New' : 'Used'}
-                    </span>
-                  </td>
+               
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(car)}
