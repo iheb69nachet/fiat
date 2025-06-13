@@ -1,78 +1,118 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, Calendar, Wrench, DollarSign } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+
+interface DashboardStats {
+  totalCars: number;
+  testDrives: number;
+  serviceBookings: number;
+  revenue: number;
+}
 
 const DashboardPage: React.FC = () => {
-  const stats = [
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCars: 0,
+    testDrives: 0,
+    serviceBookings: 0,
+    revenue: 0
+  });
+  const [recentTestDrives, setRecentTestDrives] = useState([]);
+  const [recentServices, setRecentServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch total cars
+      const { count: totalCars } = await supabase
+        .from('cars')
+        .select('id', { count: 'exact' });
+
+      // Fetch test drives count and recent test drives
+      const { count: testDrives, data: recentTestDrivesData } = await supabase
+        .from('test_drive_bookings')
+        .select('*, car:cars(*)', { count: 'exact' })
+        .order('date', { ascending: false })
+        .limit(2);
+
+      // Fetch service bookings count and recent services
+      const { count: serviceBookings, data: recentServicesData } = await supabase
+        .from('service_bookings')
+        .select('*, service:service_booking_services(service:services(*))', { count: 'exact' })
+        .order('appointment_date', { ascending: false })
+        .limit(2);
+
+      // Calculate total revenue from service bookings
+      const { data: revenueData } = await supabase
+        .from('service_bookings')
+        .select('total_price');
+      const revenue = revenueData?.reduce((total, booking) => total + (booking.total_price || 0), 0) || 0;
+
+      setStats({
+        totalCars: totalCars || 0,
+        testDrives: testDrives || 0,
+        serviceBookings: serviceBookings || 0,
+        revenue
+      });
+
+      setRecentTestDrives(recentTestDrivesData || []);
+      setRecentServices(recentServicesData || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statsCards = [
     {
       title: 'Total Cars',
-      value: '24',
-      change: '+2',
-      changeType: 'increase',
+      value: stats.totalCars.toString(),
       icon: Car,
       link: '/admin/cars'
     },
     {
       title: 'Test Drive Requests',
-      value: '12',
-      change: '+5',
-      changeType: 'increase',
+      value: stats.testDrives.toString(),
       icon: Calendar,
       link: '/admin/test-drives'
     },
     {
       title: 'Service Bookings',
-      value: '18',
-      change: '+3',
-      changeType: 'increase',
+      value: stats.serviceBookings.toString(),
       icon: Wrench,
-      link: '/admin/services'
+      link: '/admin/service-bookings'
     },
     {
       title: 'Revenue',
-      value: '$45,231',
-      change: '+8.3%',
-      changeType: 'increase',
+      value: `$${stats.revenue.toLocaleString()}`,
       icon: DollarSign,
-      link: '/admin/services'
+      link: '/admin/service-bookings'
     }
   ];
 
-  const recentTestDrives = [
-    {
-      id: '1',
-      customer: 'John Doe',
-      car: 'FIAT 500X',
-      date: '2024-03-15',
-      time: '10:00 AM',
-      status: 'pending'
-    },
-    {
-      id: '2',
-      customer: 'Jane Smith',
-      car: 'FIAT 500e',
-      date: '2024-03-16',
-      time: '2:30 PM',
-      status: 'confirmed'
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DD1D21]"></div>
+      </div>
+    );
+  }
 
-  const recentServices = [
-    {
-      id: '1',
-      customer: 'Mike Johnson',
-      services: ['Oil Change', 'Brake Inspection'],
-      date: '2024-03-15',
-      status: 'in_progress'
-    },
-    {
-      id: '2',
-      customer: 'Sarah Wilson',
-      services: ['Tire Rotation', 'Air Filter'],
-      date: '2024-03-16',
-      status: 'pending'
-    }
-  ];
+  if (error) {
+    return (
+      <div className="text-center p-4 text-red-600">
+        Error loading dashboard data: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -85,7 +125,7 @@ const DashboardPage: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Link
@@ -97,11 +137,6 @@ const DashboardPage: React.FC = () => {
                 <div className="p-2 bg-red-100 rounded-lg">
                   <Icon size={24} className="text-[#DD1D21]" />
                 </div>
-                <span className={`text-sm font-medium ${
-                  stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.change}
-                </span>
               </div>
               <h3 className="text-gray-500 text-sm font-medium">{stat.title}</h3>
               <p className="text-2xl font-bold mt-1">{stat.value}</p>
@@ -126,14 +161,14 @@ const DashboardPage: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {recentTestDrives.map((booking) => (
+              {recentTestDrives.map((booking: any) => (
                 <div key={booking.id} className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{booking.customer}</p>
-                    <p className="text-sm text-gray-500">{booking.car}</p>
+                    <p className="font-medium">{booking.first_name} {booking.last_name}</p>
+                    <p className="text-sm text-gray-500">{booking.car?.make} {booking.car?.model}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm">{booking.date}</p>
+                    <p className="text-sm">{new Date(booking.date).toLocaleDateString()}</p>
                     <span className={`
                       inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                       ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
@@ -153,7 +188,7 @@ const DashboardPage: React.FC = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Recent Services</h2>
               <Link 
-                to="/admin/services"
+                to="/admin/service-bookings"
                 className="text-[#DD1D21] text-sm hover:underline"
               >
                 View all
@@ -162,16 +197,16 @@ const DashboardPage: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              {recentServices.map((service) => (
+              {recentServices.map((service: any) => (
                 <div key={service.id} className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{service.customer}</p>
+                    <p className="font-medium">{service.first_name} {service.last_name}</p>
                     <p className="text-sm text-gray-500">
-                      {service.services.join(', ')}
+                      {service.service?.map((s: any) => s.service.name).join(', ')}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm">{service.date}</p>
+                    <p className="text-sm">{new Date(service.appointment_date).toLocaleDateString()}</p>
                     <span className={`
                       inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                       ${service.status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}

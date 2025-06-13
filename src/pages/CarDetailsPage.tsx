@@ -2,16 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Car } from '../types/Car';
-import { 
-  Clock, 
-  Fuel, 
-  Gauge, 
-  RotateCw, 
-  ArrowRight, 
-  Calendar,
+import {
+  Clock,
+  Fuel,
+  Gauge,
+  RotateCw,
+  ArrowRight,
   ChevronLeft,
-  ChevronRight,
-  CheckCircle2
+  ChevronRight
 } from 'lucide-react';
 
 const CarDetailsPage: React.FC = () => {
@@ -21,51 +19,53 @@ const CarDetailsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFeatureModal, setShowFeatureModal] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<{title: string, description: string} | null>(null);
-  
+  const [selectedFeature, setSelectedFeature] = useState<{ title: string, description: string } | null>(null);
+
   useEffect(() => {
+    const fetchCarDetails = async () => {
+      if (!id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('cars')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setCar(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCarDetails();
   }, [id]);
 
-  const fetchCarDetails = async () => {
-    if (!id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-console.log(data);
-
-      setCar(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  const nextImage = () => {
+    if (car?.images?.length) {
+      setCurrentImageIndex((currentImageIndex + 1) % car.images.length);
     }
   };
 
-  const nextImage = () => {
-    setCurrentImageIndex((currentImageIndex + 1) % car.images.length);
-  };
-
   const prevImage = () => {
-    setCurrentImageIndex((currentImageIndex - 1 + car.images.length) % car.images.length);
+    if (car?.images?.length) {
+      setCurrentImageIndex((currentImageIndex - 1 + car.images.length) % car.images.length);
+    }
   };
 
   const openFeatureModal = (title: string, description: string) => {
     setSelectedFeature({ title, description });
     setShowFeatureModal(true);
   };
-  if(!car){
 
-    return(<div></div>)
-  }
+  if (loading) return <div className="pt-24 pb-16 text-center">Loading...</div>;
+  if (error) return <div className="pt-24 pb-16 text-center text-red-600">{error}</div>;
+  if (!car) return <div className="pt-24 pb-16 text-center">No car found.</div>;
+
   return (
-    
     <div className="page-transition pt-24 pb-16">
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
@@ -79,7 +79,7 @@ console.log(data);
           </div>
         </div>
 
-        {/* Car Title & Price */}
+        {/* Title & Price */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">{car.year} {car.make} {car.model}</h1>
@@ -97,31 +97,27 @@ console.log(data);
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
           <div className="relative">
             <div className="relative h-64 md:h-96 bg-gray-100">
-              <img 
-                src={car.images[currentImageIndex]} 
-                alt={`${car.make} ${car.model}`} 
+              <img
+                src={car.images[currentImageIndex]}
+                alt={`${car.make} ${car.model}`}
                 className="w-full h-full object-cover"
               />
-              
-              {/* Navigation arrows */}
-              <button 
+              <button
                 onClick={prevImage}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
               >
                 <ChevronLeft size={24} />
               </button>
-              <button 
+              <button
                 onClick={nextImage}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
               >
                 <ChevronRight size={24} />
               </button>
             </div>
-            
-            {/* Thumbnails */}
             <div className="flex overflow-x-auto py-2 px-1 bg-gray-100">
               {car.images.map((img, idx) => (
-                <div 
+                <div
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
                   className={`
@@ -129,9 +125,9 @@ console.log(data);
                     ${currentImageIndex === idx ? 'border-[#DD1D21]' : 'border-transparent'}
                   `}
                 >
-                  <img 
-                    src={img} 
-                    alt={`${car.make} ${car.model} thumbnail ${idx + 1}`} 
+                  <img
+                    src={img}
+                    alt={`${car.make} ${car.model} thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -143,7 +139,6 @@ console.log(data);
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Car Details */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Overview */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-bold mb-6">Overview</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -170,32 +165,26 @@ console.log(data);
               </div>
             </div>
 
-            {/* Description */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-bold mb-4">Description</h2>
               <p className="text-gray-600 whitespace-pre-line">{car.description}</p>
             </div>
-
-           
-
-           
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Actions */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-xl font-bold mb-4">Ready to Experience This Car?</h3>
               <div className="space-y-3">
-                <Link 
+                <Link
                   to={`/test-drive?carId=${car.id}`}
                   className="flex items-center justify-center w-full bg-[#DD1D21] text-white py-3 px-4 rounded-md font-semibold hover:bg-[#B51419] transition-colors"
                 >
                   Schedule a Test Drive
                   <ArrowRight size={18} className="ml-2" />
                 </Link>
-                <a 
-                  href={`tel:+1800FIATUSA`}
+                <a
+                  href="tel:+1800FIATUSA"
                   className="flex items-center justify-center w-full border-2 border-[#DD1D21] text-[#DD1D21] py-3 px-4 rounded-md font-semibold hover:bg-red-50 transition-colors"
                 >
                   Call for Inquiry
@@ -203,59 +192,19 @@ console.log(data);
               </div>
             </div>
 
-            {/* Financing Calculator Teaser */}
-            <div className="bg-white rounded-lg shadow-md p-6 hidden">
-              <h3 className="text-xl font-bold mb-4">Estimate Monthly Payment</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Down Payment</label>
-                  <input 
-                    type="number" 
-                    className="w-full border border-gray-300 rounded-md py-2 px-3"
-                    placeholder="$5,000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Term (months)</label>
-                  <select className="w-full border border-gray-300 rounded-md py-2 px-3">
-                    <option>36</option>
-                    <option>48</option>
-                    <option selected>60</option>
-                    <option>72</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Interest Rate (%)</label>
-                  <input 
-                    type="number" 
-                    className="w-full border border-gray-300 rounded-md py-2 px-3"
-                    placeholder="3.9"
-                    step="0.1"
-                  />
-                </div>
-                <button className="w-full bg-gray-800 text-white py-2 px-4 rounded-md hover:bg-black transition-colors">
-                  Calculate
-                </button>
-                <div className="text-center pt-2 border-t border-gray-200 mt-2">
-                  <span className="text-gray-600 text-sm">Estimated Payment:</span>
-                  <div className="text-2xl font-bold text-[#DD1D21]">$599/mo</div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    *This is just an estimate. Contact us for actual terms.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Special Offers */}
             <div className="bg-[#DD1D21] bg-opacity-10 rounded-lg p-6 border border-[#DD1D21]">
               <h3 className="text-xl font-bold mb-2 text-[#DD1D21]">Special Offer</h3>
               <p className="text-gray-700 mb-3">
                 0% APR Financing for 60 months on select new FIAT models.
               </p>
               <p className="text-gray-600 text-sm mb-4">
-                Offer valid until {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                Offer valid until {new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </p>
-              <Link 
+              <Link
                 to="#"
                 className="flex items-center text-[#DD1D21] font-semibold hover:underline"
               >
@@ -272,7 +221,7 @@ console.log(data);
           <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
             <h3 className="text-xl font-bold mb-3">{selectedFeature.title}</h3>
             <p className="text-gray-600 mb-6">{selectedFeature.description}</p>
-            <button 
+            <button
               onClick={() => setShowFeatureModal(false)}
               className="w-full bg-[#DD1D21] text-white py-2 rounded-md hover:bg-[#B51419] transition-colors"
             >

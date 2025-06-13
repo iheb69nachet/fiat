@@ -8,7 +8,8 @@ import {
   LogOut, 
   LayoutDashboard,
   Menu,
-  X
+  X,
+  Box
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -25,9 +26,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/admin/cars', label: 'Cars', icon: Car },
+    { path: '/admin/car-parts', label: 'Car Parts', icon: Wrench },
+    { path: '/admin/orders', label: 'Orders', icon: Box },
     { path: '/admin/test-drives', label: 'Test Drives', icon: Calendar },
+    { path: '/admin/service-bookings', label: 'Service Bookings', icon: Calendar },
     { path: '/admin/services', label: 'Services', icon: Wrench },
-    { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -116,15 +119,6 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   </li>
                 );
               })}
-              <li>
-                <button
-                  onClick={handleSignOut}
-                  className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                >
-                  <LogOut size={20} className="mr-3" />
-                  Sign Out
-                </button>
-              </li>
             </ul>
           </nav>
         )}

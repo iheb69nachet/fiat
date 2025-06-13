@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DatePicker from '../components/DatePicker';
 import ServiceSelector from '../components/ServiceSelector';
-import { getServices } from '../data/services';
 import { Service } from '../types/Service';
+import { supabase } from '../lib/supabase';
 import { CheckCircle2, Clock, MapPin, Calendar, Car, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ServicePage: React.FC = () => {
@@ -17,6 +17,10 @@ const ServicePage: React.FC = () => {
     mileage: '',
     vin: ''
   });
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    setFormError(''); // Clear any form errors when date is selected
+  };
   const [personalInfo, setPersonalInfo] = useState({
     firstName: '',
     lastName: '',
@@ -27,8 +31,11 @@ const ServicePage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formError, setFormError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [services] = useState<Service[]>(getServices());
+
+  const [services, setServices] = useState<Service[]>([]);
   const [expandedSections, setExpandedSections] = useState({
     carDetails: true,
     dateTime: true,
@@ -78,7 +85,7 @@ const ServicePage: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -110,9 +117,54 @@ const ServicePage: React.FC = () => {
     // Clear any errors
     setFormError('');
     
-    // Form submission would go here
-    // For demo, just show success state
-    setFormSubmitted(true);
+    try {
+      setLoading(true);
+      
+      // Create the service booking
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('service_bookings')
+        .insert([
+          {
+            car_make: carDetails.make,
+            car_model: carDetails.model,
+            car_year: carDetails.year,
+            car_mileage: carDetails.mileage,
+            car_vin: carDetails.vin,
+            first_name: personalInfo.firstName,
+            last_name: personalInfo.lastName,
+            email: personalInfo.email,
+            phone: personalInfo.phone,
+            location: personalInfo.location,
+            appointment_date: selectedDate.toISOString().split('T')[0],
+            appointment_time: selectedTime,
+            total_price: calculateTotalPrice(),
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Insert selected services for this booking
+      const { error: servicesError } = await supabase
+        .from('service_booking_services')
+        .insert(
+          selectedServices.map(serviceId => ({
+            booking_id: bookingData.id,
+            service_id: serviceId
+          }))
+        );
+
+      if (servicesError) throw servicesError;
+
+      setFormSubmitted(true);
+    } catch (err: any) {
+      setFormError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateTotalPrice = () => {
@@ -122,28 +174,86 @@ const ServicePage: React.FC = () => {
   };
 
   const nextStep = () => {
-    if (currentStep === 1 && (!carDetails.make || !carDetails.model || !carDetails.year)) {
-      setFormError('Please provide your car details to continue.');
-      return;
-    }
-    
-    if (currentStep === 2 && (!selectedDate || !selectedTime)) {
-      setFormError('Please select both date and time to continue.');
-      return;
-    }
-    
-    if (currentStep === 3 && selectedServices.length === 0) {
-      setFormError('Please select at least one service to continue.');
-      return;
-    }
-    
-    setFormError('');
-    setCurrentStep(prev => Math.min(prev + 1, 4));
+    // // Validate current step
+    // const newStep = Math.max(prev - 1, 1);
+ 
+
+    // // Clear any errors and move to next step
+    // setFormError('');
+    // setExpandedSections(prevSections => ({
+    //   ...prevSections,
+    //   carDetails: newStep === 1,
+    //   dateTime: newStep === 2,
+    //   services: newStep === 3
+    // }));
+    // setCurrentStep(prev => prev + 1);
+    setCurrentStep(prev => {
+      const newStep = Math.max(prev + 1, 1);
+  
+      // Expand the corresponding section for the new step
+      setExpandedSections(prevSections => ({
+        ...prevSections,
+        carDetails: newStep === 1,
+        dateTime: newStep === 2,
+        services: newStep === 3
+      }));
+  
+      return newStep;
+    });
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep(prev => {
+      const newStep = Math.max(prev - 1, 1);
+  
+      // Expand the corresponding section for the new step
+      setExpandedSections(prevSections => ({
+        ...prevSections,
+        carDetails: newStep === 1,
+        dateTime: newStep === 2,
+        services: newStep === 3
+      }));
+  
+      return newStep;
+    });
   };
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('category', { ascending: true });
+
+      if (error) throw error;
+
+      setServices(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DD1D21]"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-4 text-red-600">
+        Error loading services: {error}
+      </div>
+    );
+  }
 
   if (formSubmitted) {
     return (
@@ -308,7 +418,7 @@ const ServicePage: React.FC = () => {
                           Year*
                         </label>
                         <input
-                          type="text"
+                          type="number"
                           id="year"
                           name="year"
                           value={carDetails.year}
@@ -364,77 +474,83 @@ const ServicePage: React.FC = () => {
               </div>
 
               {/* Date & Time Section */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <button
-                  type="button"
-                  className="flex items-center justify-between w-full bg-gray-50 p-4 text-left"
-                  onClick={() => toggleSection('dateTime')}
-                >
-                  <div className="flex items-center">
-                    <span className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3">2</span>
-                    <h2 className="text-lg font-bold">Select Date & Time</h2>
-                  </div>
-                  {expandedSections.dateTime ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
-                
-                {expandedSections.dateTime && (
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="font-medium mb-4">Date</h3>
-                        <DatePicker 
-                          selectedDate={selectedDate}
-                          onDateSelect={setSelectedDate}
-                          minDate={new Date()}
-                        />
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium mb-4">Time</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {timeOptions.map(time => (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={() => setSelectedTime(time)}
-                              className={`
-                                py-3 px-4 rounded-md border text-center
-                                ${selectedTime === time 
-                                  ? 'bg-[#DD1D21] text-white border-[#DD1D21]' 
-                                  : 'border-gray-300 hover:border-gray-400'}
-                              `}
-                            >
-                              {time}
-                            </button>
-                          ))}
+              {
+                currentStep>1&&(
+                  <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full bg-gray-50 p-4 text-left"
+                    onClick={() => toggleSection('dateTime')}
+                  >
+                    <div className="flex items-center">
+                      <span className="h-6 w-6 rounded-full bg-[#DD1D21] text-white flex items-center justify-center mr-3">2</span>
+                      <h2 className="text-lg font-bold">Select Date & Time</h2>
+                    </div>
+                    {expandedSections.dateTime ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                  
+                  {expandedSections.dateTime && (
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h3 className="font-medium mb-4">Date</h3>
+                          
+                          <DatePicker
+                            selected={selectedDate}
+                            onChange={handleDateChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#DD1D21] focus:ring focus:ring-[#DD1D21] focus:ring-opacity-50"
+                            placeholderText="Select appointment date"
+                          />
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-medium mb-4">Time</h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            {timeOptions.map(time => (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => setSelectedTime(time)}
+                                className={`
+                                  py-3 px-4 rounded-md border text-center
+                                  ${selectedTime === time 
+                                    ? 'bg-[#DD1D21] text-white border-[#DD1D21]' 
+                                    : 'border-gray-300 hover:border-gray-400'}
+                                `}
+                              >
+                                {time}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
+                      
+                      {currentStep === 2 && (
+                        <div className="mt-6 flex space-x-4">
+                          <button
+                            type="button"
+                            onClick={prevStep}
+                            className="border border-gray-300 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-50 transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button
+                            type="button"
+                            onClick={nextStep}
+                            className="bg-[#DD1D21] text-white py-2 px-6 rounded-md hover:bg-[#B51419] transition-colors"
+                          >
+                            Continue
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    
-                    {currentStep === 2 && (
-                      <div className="mt-6 flex space-x-4">
-                        <button
-                          type="button"
-                          onClick={prevStep}
-                          className="border border-gray-300 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-50 transition-colors"
-                        >
-                          Back
-                        </button>
-                        <button
-                          type="button"
-                          onClick={nextStep}
-                          className="bg-[#DD1D21] text-white py-2 px-6 rounded-md hover:bg-[#B51419] transition-colors"
-                        >
-                          Continue
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Services Selection Section */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                  )}
+                </div>
+                )
+              }
+             {
+              currentStep>2&&(
+                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
                 <button
                   type="button"
                   className="flex items-center justify-between w-full bg-gray-50 p-4 text-left"
@@ -476,9 +592,13 @@ const ServicePage: React.FC = () => {
                   </div>
                 )}
               </div>
+              )
+             }
 
-              {/* Personal Information Section */}
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+              {/* Services Selection Section */}
+             {
+              currentStep>3&&(
+ <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
                 <button
                   type="button"
                   className="flex items-center justify-between w-full bg-gray-50 p-4 text-left"
@@ -597,6 +717,11 @@ const ServicePage: React.FC = () => {
                   </div>
                 )}
               </div>
+              )
+             }
+
+              {/* Personal Information Section */}
+             
             </form>
           </div>
           

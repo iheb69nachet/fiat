@@ -89,6 +89,11 @@ const DatePicker: React.FC<DatePickerProps> = ({
     return days;
   };
 
+  const handleInputClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    e.preventDefault(); // Prevent any form submission
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="relative">
       <input
@@ -96,7 +101,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
         readOnly
         placeholder={placeholderText}
         value={selected ? formatDate(selected) : ''}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleInputClick}
         className={className}
       />
 

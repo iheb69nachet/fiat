@@ -18,6 +18,12 @@ import AdminLayout from './components/admin/AdminLayout';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import { AuthProvider } from './lib/auth';
 import './App.css';
+import CarPartsPage from './pages/CarPartsPage';
+import CarPartsManagementPage from './pages/admin/CarPartsManagementPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
+// Add import
+import OrdersManagementPage from './pages/admin/OrdersManagementPage';
 
 function App() {
   return (
@@ -87,6 +93,18 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/admin/orders" 
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <OrdersManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           
           {/* Public Routes */}
           <Route
@@ -148,6 +166,24 @@ function App() {
                 <Footer />
               </>
             }
+          />
+          <Route path="/car-parts" element={<>
+            <Header />
+                <main className="flex-grow">
+                  <CarPartsPage />
+                </main>
+                <Footer />
+          </>} />
+          // Add this route in the admin routes section
+          <Route 
+            path="/admin/car-parts" 
+            element={
+              <ProtectedRoute>
+                <AdminLayout>
+                  <CarPartsManagementPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
           />
         </Routes>
       </AuthProvider>

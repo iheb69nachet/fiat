@@ -43,7 +43,7 @@ const Header: React.FC = () => {
                   className={`font-medium ${
                     location.pathname === '/' 
                       ? 'text-[#DD1D21]' 
-                      : isScrolled ? 'text-gray-800' : 'text-white'
+                      : 'text-black'
                   } hover:text-[#DD1D21] transition-colors`}
                 >
                   Home
@@ -55,10 +55,22 @@ const Header: React.FC = () => {
                   className={`font-medium ${
                     location.pathname === '/cars' 
                       ? 'text-[#DD1D21]' 
-                      : isScrolled ? 'text-gray-800' : 'text-white'
+                      : 'text-black'
                   } hover:text-[#DD1D21] transition-colors`}
                 >
                   Our Cars
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/car-parts" 
+                  className={`font-medium ${
+                    location.pathname === '/car-parts' 
+                      ? 'text-[#DD1D21]' 
+                      : 'text-black'
+                  } hover:text-[#DD1D21] transition-colors`}
+                >
+                  Our Cars Parts
                 </Link>
               </li>
               <li>
@@ -67,7 +79,7 @@ const Header: React.FC = () => {
                   className={`font-medium ${
                     location.pathname === '/test-drive' 
                       ? 'text-[#DD1D21]' 
-                      : isScrolled ? 'text-gray-800' : 'text-white'
+                      : 'text-black'
                   } hover:text-[#DD1D21] transition-colors`}
                 >
                   Test Drive
@@ -79,7 +91,7 @@ const Header: React.FC = () => {
                   className={`font-medium ${
                     location.pathname === '/service' 
                       ? 'text-[#DD1D21]' 
-                      : isScrolled ? 'text-gray-800' : 'text-white'
+                      : 'text-black'
                   } hover:text-[#DD1D21] transition-colors`}
                 >
                   Service
