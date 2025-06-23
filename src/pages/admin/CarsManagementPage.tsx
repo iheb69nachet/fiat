@@ -284,9 +284,9 @@ const CarsManagementPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">${car.price.toLocaleString()}</div>
+                    <div className="text-sm text-gray-900">{car.price.toLocaleString()} DT</div>
                     {car.msrp && (
-                      <div className="text-sm text-gray-500">MSRP: ${car.msrp.toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">MSRP: {car.msrp.toLocaleString()} DT</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

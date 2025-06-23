@@ -114,7 +114,7 @@ export default function CarAdmin() {
                 <img src={car.image} alt={`${car.make} ${car.model}`} className="w-full h-48 object-cover mb-4" />
                 <h3 className="font-semibold">{car.make} {car.model}</h3>
                 <p className="text-gray-600">{car.year} {car.trim}</p>
-                <p className="text-green-600 font-semibold">${car.price.toLocaleString()}</p>
+                <p className="text-green-600 font-semibold">{car.price.toLocaleString()} DT</p>
                 <div className="mt-4 flex justify-end space-x-2">
                   <button
                     onClick={() => setFormData(car)}

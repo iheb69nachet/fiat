@@ -58,7 +58,7 @@ const ServiceSelector: React.FC<ServiceSelectorProps> = ({
                   <div className="flex-grow">
                     <div className="flex justify-between">
                       <h4 className="text-base font-medium">{service.name}</h4>
-                      <span className="text-base font-semibold text-[#DD1D21]">${service.price.toFixed(2)}</span>
+                      <span className="text-base font-semibold text-[#DD1D21]">{service.price.toFixed(2)} DT</span>
                     </div>
                     <p className="text-gray-600 text-sm mt-1">{service.description}</p>
                     

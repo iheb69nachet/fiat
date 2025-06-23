@@ -101,7 +101,7 @@ const OrderConfirmationPage: React.FC = () => {
             <img src={part.image} alt={part.name} className="w-24 h-24 object-cover rounded" />
             <div>
               <h3 className="font-semibold">{part.name}</h3>
-              <p className="text-gray-600">${part.price} × {order.quantity}</p>
+              <p className="text-gray-600">{part.price} DT × {order.quantity}</p>
             </div>
           </div>
 
@@ -124,7 +124,7 @@ const OrderConfirmationPage: React.FC = () => {
             </div>
             <div className="flex justify-between font-semibold text-lg mt-4 pt-4 border-t">
               <span>Total</span>
-              <span>${order.total_price.toFixed(2)}</span>
+              <span>{order.total_price.toFixed(2)} DT</span>
             </div>
           </div>
         </div>

@@ -318,21 +318,21 @@ const ServicePage: React.FC = () => {
                       .map(service => (
                         <li key={service.id} className="flex justify-between">
                           <span>{service.name}</span>
-                          <span className="font-medium">${service.price.toFixed(2)}</span>
+                          <span className="font-medium">{service.price.toFixed(2)} DT</span>
                         </li>
                       ))
                     }
                   </ul>
                   <div className="flex justify-between font-bold text-lg mt-4 pt-4 border-t border-gray-200">
                     <span>Total</span>
-                    <span>${calculateTotalPrice().toFixed(2)}</span>
+                    <span>{calculateTotalPrice().toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>
               
               <p className="text-sm text-gray-500 mb-6">
                 Our service team will contact you shortly to confirm your appointment. 
-                If you need to reschedule, please call us at (800) FIAT-USA.
+                If you need to reschedule, please call us at (800) FIAT-TUNISIA.
               </p>
               
               <div className="flex space-x-4">
@@ -765,14 +765,14 @@ const ServicePage: React.FC = () => {
                       .map(service => (
                         <li key={service.id} className="flex justify-between">
                           <span>{service.name}</span>
-                          <span className="font-medium">${service.price.toFixed(2)}</span>
+                          <span className="font-medium">{service.price.toFixed(2)} DT</span>
                         </li>
                       ))
                     }
                   </ul>
                   <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between font-bold">
                     <span>Total</span>
-                    <span>${calculateTotalPrice().toFixed(2)}</span>
+                    <span>{calculateTotalPrice().toFixed(2)} DT</span>
                   </div>
                 </div>
               )}
@@ -827,7 +827,7 @@ const ServicePage: React.FC = () => {
                   href="tel:+1800FIATUSA" 
                   className="flex items-center text-[#DD1D21] font-medium hover:underline"
                 >
-                  Call (800) FIAT-USA
+                  Call (800) FIAT-TUNISIA
                 </a>
                 <a 
                   href="mailto:service@fiat.com" 

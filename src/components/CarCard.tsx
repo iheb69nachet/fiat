@@ -26,10 +26,10 @@ const CarCard: React.FC<CarCardProps> = ({ car }) => {
       <div className="p-6">
         <h3 className="text-xl font-bold mb-2">{car.make} {car.model}</h3>
         <div className="flex items-center mb-4">
-          <span className="text-2xl font-bold text-[#DD1D21]">${car.price.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-[#DD1D21]">{car.price.toLocaleString()} DT</span>
           {car.msrp && car.msrp > car.price && (
             <span className="ml-2 text-sm text-gray-500 line-through">
-              ${car.msrp.toLocaleString()}
+              {car.msrp.toLocaleString()} DT
             </span>
           )}
         </div>

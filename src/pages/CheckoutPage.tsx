@@ -305,7 +305,7 @@ const CheckoutPage = () => {
                       <Star size={12} className="fill-yellow-400 text-yellow-400" />
                       <span className="text-xs text-gray-600">{part.rating}</span>
                     </div>
-                    <p className="font-semibold text-blue-600">${part.price}</p>
+                    <p className="font-semibold text-blue-600">{part.price} DT</p>
                   </div>
                 </div>
                 
@@ -342,7 +342,7 @@ const CheckoutPage = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium">{subtotal.toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
@@ -352,12 +352,12 @@ const CheckoutPage = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax</span>
-                  <span className="font-medium">${tax.toFixed(2)}</span>
+                  <span className="font-medium">{tax.toFixed(2)} DT</span>
                 </div>
                 <div className="border-t border-gray-100 pt-3">
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold text-gray-900">Total</span>
-                    <span className="text-lg font-bold text-blue-600">${total.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-blue-600">{total.toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>

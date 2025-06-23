@@ -276,7 +276,7 @@ const CarPartsManagementPage: React.FC = () => {
                 <h3 className="font-semibold text-lg mb-2">{part.name}</h3>
                 <p className="text-gray-600 text-sm mb-2">{part.description}</p>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-lg">${part.price}</span>
+                  <span className="font-bold text-lg">{part.price} DT</span>
                   <span className="text-sm text-gray-500">Stock: {part.stock_quantity}</span>
                 </div>
                 <div className="flex justify-end gap-2">

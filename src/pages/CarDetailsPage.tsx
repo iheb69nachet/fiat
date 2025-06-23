@@ -86,9 +86,9 @@ const CarDetailsPage: React.FC = () => {
             <p className="text-gray-600">{car.trim}</p>
           </div>
           <div className="mt-4 md:mt-0">
-            <div className="text-3xl font-bold text-[#DD1D21]">${car.price.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-[#DD1D21]">{car.price.toLocaleString()} DT</div>
             {car.msrp && car.msrp > car.price && (
-              <div className="text-gray-500 line-through text-lg">${car.msrp.toLocaleString()}</div>
+              <div className="text-gray-500 line-through text-lg">{car.msrp.toLocaleString()} DT</div>
             )}
           </div>
         </div>
